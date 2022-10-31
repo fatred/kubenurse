@@ -1,0 +1,86 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: {{ include "name" . | quote }}
+{{ include "helm-labels" . | indent 4 }}
+  name: {{ include "name" . | quote }}
+  namespace: {{ include "namespace" . }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "name" . | quote }}
+  template:
+    metadata:
+      labels:
+        {{- if .Values.daemonset.podLabels }}
+        {{- toYaml .Values.daemonset.podLabels | nindent 8 }}
+        {{- end }}
+        app: {{ include "name" . | quote }}
+{{ include "common-labels" . | indent 8 }}
+      annotations:
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "8080"
+        prometheus.io/scheme: "http"
+        prometheus.io/scrape: "true"
+        {{- if .Values.daemonset.podAnnotations }}
+        {{- toYaml .Values.daemonset.podAnnotations | nindent 8 }}
+        {{- end }}
+    spec:
+      securityContext:
+      {{- if .Values.daemonset.podSecurityContext -}}
+      {{ toYaml .Values.daemonset.podSecurityContext | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "name" . | quote }}
+      containers:
+      - name: {{ include "name" . | quote }}
+        securityContext:
+          {{- if .Values.daemonset.containerSecurityContext -}}
+          {{ toYaml .Values.daemonset.containerSecurityContext | nindent 10 }}
+          {{- end }}
+        env:
+        - name: KUBENURSE_INGRESS_URL
+          value: https://{{ .Values.ingress.url }}
+        - name: KUBENURSE_SERVICE_URL
+          value: "http://kubenurse.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.service.port }}"
+        - name: KUBENURSE_INSECURE
+          value: {{ .Values.insecure  | quote }}
+        - name: KUBENURSE_ALLOW_UNSCHEDULABLE
+          value: "false"
+        - name: KUBENURSE_NAMESPACE
+          value: {{ .Values.namespace }}
+        - name: KUBENURSE_NEIGHBOUR_FILTER
+          value: app={{ include "name" . }}
+          {{- if .Values.daemonset.extraEnvs -}}
+          {{- toYaml .Values.daemonset.extraEnvs | nindent 8 }}
+          {{- end }}
+        image: {{ include "image" . | quote }}
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 1
+          httpGet:
+            path: /ready
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 3
+          successThreshold: 1
+          timeoutSeconds: 1
+        volumeMounts:
+        {{- if .Values.daemonset.volumeMounts -}}
+        {{- toYaml .Values.daemonset.volumeMounts | nindent 8 }}
+        {{- end }}
+      tolerations:
+      {{- if .Values.daemonset.tolerations }}
+      {{- toYaml .Values.daemonset.tolerations | nindent 6 }}
+      {{- end }}
+      dnsConfig:
+      {{- if .Values.daemonset.dnsConfig }}
+      {{- toYaml .Values.daemonset.dnsConfig | nindent 8 }}
+      {{- end }}
+      volumes:
+      {{- if .Values.daemonset.volumes -}}
+      {{- toYaml .Values.daemonset.volumes | nindent 6 }}
+      {{- end }}

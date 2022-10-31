@@ -1,0 +1,44 @@
+daemonset:
+  image:
+    repository: postfinance/kubenurse
+    tag: v1.6.0
+  extraEnvs: []
+  podLabels: {}
+  podAnnotations: {}
+  podSecurityContext: {}
+  containerSecurityContext: {}
+  tolerations: 
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/master
+    operator: Equal
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/control-plane
+    operator: Equal
+  dnsConfig: {}
+  volumeMounts: []
+  volumes: []
+
+serviceMonitor: 
+  enabled: false
+  labels: {}
+
+insecure: true
+
+namespace: kube-system
+
+serviceAccount:
+  name: kubenurse
+
+service:
+  name: 8080-8080
+  port: 8080
+  labels: {}
+
+ingress:
+  enabled: true
+  className: nginx
+  url: dummy-kubenurse.example.com
+
+rbac:
+  allow_unschedulable:
+    enabled: true
